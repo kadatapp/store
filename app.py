@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-
+import os
 import pandas as pd
 from dash import Dash, Input, Output, State, ALL, dcc, html, callback_context, no_update
 
@@ -1484,4 +1484,5 @@ def complete_checkout(n_clicks, customer_name, phone, address, promo_code, cart_
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8050))
+    app.run_server(host="0.0.0.0", port=port, debug=False)
