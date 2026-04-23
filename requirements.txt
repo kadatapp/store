@@ -1,2 +1,4 @@
-dash>=2.18,<3.0
-pandas>=2.2,<3.0 
+dash==2.18.2
+pandas
+openpyxl
+gunicorn
