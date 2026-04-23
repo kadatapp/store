@@ -99,7 +99,7 @@ def get_service():
         creds_dict = json.load(f)
 
     # # Fix newline issue
-    # creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 
     creds = service_account.Credentials.from_service_account_info(
         creds_dict,
