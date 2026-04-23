@@ -1,4 +1,3 @@
-dash==2.18.2
-pandas
-openpyxl
-gunicorn
+dash>=2.18,<3.0
+pandas>=2.2,<3.0
+openpyxl>=3.1,<4.0

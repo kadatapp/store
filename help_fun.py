@@ -7,6 +7,9 @@ import pandas as pd
 from dash import Dash, Input, Output, State, ALL, dcc, html, callback_context, no_update
 from help_DATA import get_dict_MENU_ITEMS,get_dict_RENTAL_LISTINGS
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
 
 
@@ -24,6 +27,134 @@ PROMO_CODE = "DASHFOOD"
 PROMO_THRESHOLD = 40
 PROMO_RATE = 0.20
 ITEM_LOOKUP = {item["id"]: item for item in MENU_ITEMS}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+def get_drive_service():
+    creds = service_account.Credentials.from_service_account_file(
+        "service_account.json",
+        scopes=SCOPES
+    )
+    return build("drive", "v3", credentials=creds)
+
+
+def upload_to_drive(file_path, file_id):
+    service = get_drive_service()
+
+    media = MediaFileUpload(
+        file_path,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    service.files().update(
+        fileId=file_id,
+        media_body=media
+    ).execute()
+
+
+
+
+
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+SPREADSHEET_ID = "1GjRXG_U_i_KF_UleYquU-nekznqN7Evnv389ZdE6tQQ"
+RANGE = "Sheet1!A:Z"
+
+# def get_sheets_service():
+#     creds = service_account.Credentials.from_service_account_file(
+#         "service_account.json",
+#         scopes=SCOPES
+#     )
+#     return build("sheets", "v4", credentials=creds)
+import os, json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+
+
+
+
+ 
+def get_service():
+    with open("service_account.json") as f:
+        creds_dict = json.load(f)
+
+    # # Fix newline issue
+    # creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
+    creds = service_account.Credentials.from_service_account_info(
+        creds_dict,
+        scopes=SCOPES
+    )
+
+    return build("sheets", "v4", credentials=creds)
+
+
+
+
+import os, json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+def get_sheets_service():
+    creds_dict = json.loads(os.environ["GOOGLE_CREDS"])
+
+    creds = service_account.Credentials.from_service_account_info(
+        creds_dict,
+        scopes=SCOPES
+    )
+
+    return build("sheets", "v4", credentials=creds)
+
+def save_order_to_sheet(order_row: dict):
+    service = get_service()
+
+    values = [[
+        order_row["order_time"],
+        order_row["department"],
+        order_row["stores"],
+        order_row["customer_name"],
+        order_row["phone"],
+        order_row["address"],
+        order_row["promo_code"],
+        order_row["items"],
+        order_row["subtotal"],
+        order_row["discount"],
+        order_row["total"],
+    ]]
+
+    body = {"values": values}
+
+    service.spreadsheets().values().append(
+        spreadsheetId=SPREADSHEET_ID,
+        range=RANGE,
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body=body
+    ).execute()
+
+
 
 
 def format_currency(amount: int) -> str:
@@ -437,10 +568,13 @@ def save_order_to_excel(
     promo_code: str,
     cart_data: list,
     ORDERS_FILE,
+    DRIVE_FILE_ID, 
 ) -> None:
     order_items, subtotal, discount, total = serialize_order_items(cart_data, promo_code)
+
     active_departments = sorted({entry["department"] for entry in cart_data})
     active_stores = sorted({entry["store"] for entry in cart_data})
+
     order_row = {
         "order_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "department": ", ".join(active_departments),
@@ -454,16 +588,15 @@ def save_order_to_excel(
         "discount": discount,
         "total": total,
     }
-
     if ORDERS_FILE.exists():
         existing_orders = pd.read_excel(ORDERS_FILE)
         updated_orders = pd.concat([existing_orders, pd.DataFrame([order_row])], ignore_index=True)
     else:
         updated_orders = pd.DataFrame([order_row])
 
-    updated_orders.to_excel(ORDERS_FILE, index=False)
-
-
+    # updated_orders.to_excel(ORDERS_FILE, index=False)
+    # upload_to_drive(str(ORDERS_FILE), DRIVE_FILE_ID)
+    save_order_to_sheet(order_row)
 
 
 
